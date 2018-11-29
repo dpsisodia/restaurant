@@ -1,15 +1,16 @@
 package com.example.demo;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.PriorityBlockingQueue;
 
 public class RestManager
 {	
-	
-	Map<Integer, List<Table>> map = new HashMap<Integer, List<Table>>(); 
-	Map<ClientsGroup, Table> seatings = new HashMap<ClientsGroup, Table>(); 
+	PriorityBlockingQueue<ClientsGroup> queue = new PriorityBlockingQueue<ClientsGroup>();
+	Map<Integer, List<Table>> map = new ConcurrentHashMap<Integer, List<Table>>(); 
+	Map<ClientsGroup, Table> seatings = new ConcurrentHashMap<ClientsGroup, Table>(); 
    public RestManager (List<Table> tables)
    {	for(Table t:tables) {
 	   		if(map.keySet().contains(t.size))
@@ -23,10 +24,8 @@ public class RestManager
    // new client(s) show up
    public void onArrive (ClientsGroup group)
    {   
-	   if (map.get(group.size) != null && map.get(group.size).size() > 0) {
-		   Table t = map.get(group.size).remove(0);
-		   seatings.put(group, t);
-	   } 
+	   if(!attemptSeating(group)) 
+		   queue.add(group);
 	   		
 	   
    }
@@ -38,7 +37,13 @@ public class RestManager
 	   if (seatings.keySet().contains(group)) {
 		   Table t = seatings.remove(group);
 		   map.get(group.size).add(t);
-	   }
+	   } else 
+		   if(queue.remove(group)) {
+			   group = queue.peek();
+			   if(attemptSeating(group))
+				   queue.remove(group);
+		   }
+
    }
 
    // return table where a given client group is seated, 
@@ -46,5 +51,14 @@ public class RestManager
    public Table lookup (ClientsGroup group)
    {
       return seatings.get(group);
+   }
+  
+   public boolean attemptSeating(ClientsGroup group) {
+	if (map.get(group.size) != null && map.get(group.size).size() > 0) {
+		   Table t = map.get(group.size).remove(0);
+		   seatings.put(group, t);
+		   return true;
+	   }
+	return false;
    }
 }
