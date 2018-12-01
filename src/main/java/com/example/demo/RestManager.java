@@ -24,8 +24,11 @@ public class RestManager
    // new client(s) show up
    public void onArrive (ClientsGroup group)
    {   
-	   if(!attemptSeating(group)) 
-		   queue.add(group);
+	queue.add(group);
+	group = queue.peek();
+	if(attemptSeating(group))
+		queue.remove(group);
+		   
 	   		
 	   
    }
